@@ -184,7 +184,7 @@ Calendar.prototype.getRow = function(date) {
  * @param date a Date object
  * */
 Calendar.prototype.getRectIndex = function(date) {
-  // return this.getColumn(date)*
+  return this.getColumn(date)*this.getRowsCount()+this.getRow(date);
 }
 
 
@@ -376,16 +376,9 @@ Calendar.prototype.render = function() {
     .enter().append('rect')
       .attr("width", cellWidth)
       .attr("height", cellHeight)
-      .attr("x", function(val, index) { return index })
+      .attr("x", function(val, index) {return Math.floor(index/rowsCount) * cellWidth;})
+      .attr("y", function(val, index) {return (cellHeight*rowsCount) - ((index%rowsCount) * cellHeight) - cellHeight;})
 
   return;
-  var rect = svg.append("g")
-    .attr("fill", "none")
-    .attr("stroke", "#ccc")
-  .selectAll("rect")
-  .data(function(d) { return d3.timeDays(new Date(d, 0, 1), new Date(d + 1, 0, 1)); })
-  .enter().append("rect")
-
-  var emptyData = [columnsCount];
 
 }
