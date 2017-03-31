@@ -329,25 +329,22 @@ Calendar.prototype.getRowNames = function() {
 /* Renders X Axis
  *
  * */
-Calendar.prototype.renderXAxis = function() {
-  var rowsCount  = this.getRowsCount(),
-      cellHeight = (this.options.height) / rowsCount,
-      cellWidth  = (this.options.width) / columnsCount;
+Calendar.prototype.renderXAxis = function(elem, graphWidth, fontSize) {
+  var cellWidth  = graphWidth / this.getColumnsCount(),
+      xAxis      = elem;
 
-  // Init textXAxis if needed
-  if (this.canvas.textXAxis == undefined)
-    this.canvas.textXAxis = this.canvas.svg.append('g').classed('textXAxis', true);
+  if (fontSize == undefined)
+    fontSize = 12;
 
   // Render texts on X Axis
-  this.canvas.textXAxis.selectAll('text')
+  xAxis.selectAll('text')
       .data(this.getColNames())
       .enter().append('text')
         .attr('transform', function(val, index) {
-          return 'translate('+(index*cellWidth)+', '+(rowsCount*cellHeight)+')';
+          return 'translate('+(index*cellWidth)+', 0)';
         })
-        .attr('font-size', 12)
+        .attr('font-size', fontSize)
         .text(function(val, index, data) { return val; });
-  this.canvas.textXAxis.exit().remove();
 
 }
 
@@ -355,25 +352,27 @@ Calendar.prototype.renderXAxis = function() {
 /* Renders Y Axis
  *
  * */
-Calendar.prototype.renderYAxis = function() {
-  var rowsCount  = this.getRowsCount();
-  var cellHeight = (this.options.height) / rowsCount;
+Calendar.prototype.renderYAxis = function(elem, graphHeight, fontSize) {
+  var cellHeight = graphHeight / this.getRowsCount(),
+      yAxis      = elem;
 
-  // Init textYAxis if needed
-  if (this.canvas.textYAxis == undefined)
-    this.canvas.textYAxis = this.canvas.svg.append('g').classed('textYAxis', true);
-
+  if (fontSize == undefined)
+    fontSize = 12;
 
   // Render texts on Y Axis
-  this.canvas.textYAxis.selectAll('text')
+  console.log(this.getRowNames());
+  var self = this;
+  yAxis.selectAll('text')
       .data(this.getRowNames())
       .enter().append('text')
         .attr('transform', function(val, index) {
-          return 'translate(0, '+((cellHeight*rowsCount)-(index*cellHeight))+')';
+          if (self.options.yAxis.flip)
+            return 'translate(0, '+(graphHeight - (index*cellHeight) - 2)+')';
+          else
+            return 'translate(0, '+(((index+1)*cellHeight) - 2)+')';
         })
-        .attr('font-size', 12)
+        .attr('font-size', fontSize)
         .text(function(val, index, data) { return val; });
-  this.canvas.textXAxis.exit().remove();
 }
 
 
@@ -384,18 +383,14 @@ Calendar.prototype.renderYAxis = function() {
  * @param height hight of the graph
  * */
 Calendar.prototype.renderRects = function(elem, width, height) {
-  var cellWidth  = (this.options.width) / this.getColumnsCount(),
-      cellHeight = (this.options.height) / this.getRowsCount(),
+  var cellWidth  = (width) / this.getColumnsCount(),
+      cellHeight = (height) / this.getRowsCount(),
       rowsCount  = this.getRowsCount();
-
-  // Init rect if needed
-  if (this.canvas.rect == undefined)
-    this.canvas.rect = this.canvas.svg.append('g').classed('rect', true);
-
+      rect       = elem;
 
   // Render rectangles
   var self = this;
-  this.canvas.rect
+  rect
     .attr('fill', 'none')
     .attr('stroke', '#eee')
     .attr('stroke-width', '0.05')
@@ -406,8 +401,9 @@ Calendar.prototype.renderRects = function(elem, width, height) {
       .attr("height", cellHeight)
       .attr("x", function(val, index) {return self.getCol(val) * cellWidth;})
       .attr("y", function(val, index) {
-        if (self.options.yAxis.flip)
-          return (cellHeight*rowsCount) - (self.getRow(val) * cellHeight) - cellHeight;
+        if (self.options.yAxis.flip) {
+          return height - (self.getRow(val) * cellHeight) - cellHeight;
+        }
         else
           return self.getRow(val) * cellHeight;
       })
@@ -421,20 +417,25 @@ Calendar.prototype.renderRects = function(elem, width, height) {
 
   
   // Fill rectangles with color based on data
-  this.canvas.rect.selectAll('rect')
+  rect.selectAll('rect')
     .filter(function(d) { return d in self.data; })
     .attr("fill", function(d, a) { return color(self.data[d]); })
- //   .attr("stroke", function(d, a) { return color(self.data[d]); })
+
+  return rect;
+
 }
 
 /* Renders the calendar
  *
  * */
 Calendar.prototype.render = function() {
-  // Attributes
 
-  var cellWidth = ((this.options.width) / this.getColumnsCount());
-  var cellHeight = ((this.options.height) / this.getRowsCount());
+  var yAxisWidth    = (this.options.yAxis.show ? 30 : 0),
+      xAxisHeight   = (this.options.xAxis.show ? 15 : 0),
+      yAxisFontSize = 12;
+
+  var graphWidth  = this.options.width-yAxisWidth,
+      graphHeight = this.options.height-xAxisHeight;
 
   // Init canvas if needed
   if (this.canvas.svg == undefined)
@@ -444,7 +445,37 @@ Calendar.prototype.render = function() {
               .attr("height", this.options.height)
               .append('g').classed('svg', true);
 
- 
-  this.renderRects();
+
+  // Init rect if needed
+  if (this.canvas.rect == undefined)
+    this.canvas.rect = this.canvas.svg
+                           .append('g').classed('rect', true);
+  // Render rect
+  this.canvas.rect.attr('transform', 'translate('+yAxisWidth+', 0)');
+  this.renderRects(this.canvas.rect, graphWidth, graphHeight);
+
+
+  var axesFontSize = (graphHeight / this.getRowsCount()) - 2;
+
+  // Init X axis if needed
+  if (this.canvas.xAxis == undefined)
+    this.canvas.xAxis = this.canvas.svg
+                            .append('g').classed('xAxis', true)
+  // Render X axis
+  if (this.options.xAxis.show) {
+    this.canvas.xAxis.attr('transform', 'translate('+(yAxisWidth + 2)+', '+(graphHeight + xAxisHeight)+')')
+    this.renderXAxis(this.canvas.xAxis, graphWidth, axesFontSize);
+  }
+
+
+  // Init Y axis if needed
+  if (this.canvas.yAxis == undefined)
+    this.canvas.yAxis = this.canvas.svg
+                            .append('g').classed('yAxis', true)
+  // Render Y axis
+  if (this.options.yAxis.show) {
+    this.canvas.yAxis.attr('transform', 'translate('+0+', '+0+')')
+    this.renderYAxis(this.canvas.yAxis, graphHeight, axesFontSize);
+  }
 }
 
