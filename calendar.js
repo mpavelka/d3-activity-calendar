@@ -117,22 +117,21 @@ Calendar.prototype._init = function(options) {
     width:      800,
     height:     400,
     responsive: false,
-    x : {
-      gran: Calendar.gran.DAY
-    },
-    y : {
-      gran: Calendar.gran.HOUR
-    },
-    granX:      Calendar.gran.DAY,
-    granY:      Calendar.gran.HOUR, // Must be less than or equal to granX
     minDate:    null,
     maxDate:    null,
-    showXAxis:  true,
-    showYAxis:  true,
+    xAxis : {
+      gran: Calendar.gran.DAY,
+      show: true,
+    },
+    yAxis : {
+      gran: Calendar.gran.HOUR, // Must be less than or equal to granX
+      flip: false,
+      show: true,
+    },
     colorRange: ["#ffffff", "#f6fafd", "#edf6fc", "#e3f0fa", "#daebf8", "#d1e7f6", "#c8e2f5", "#bfdef3", "#b6d9f2", "#a4c9e4", "#8fb5d2", "#7aa1bf", "#658dad", "#4f799b", "#3a6488", "#244f75", "#0f3b63", "#012d56", "#012b52", "#01294d", "#002649", "#002444", "#002140", "#00203d", "#001d38"],
   }, options);
 
-  if (this.options.granY > this.options.granX)
+  if (this.options.yAxis.gran > this.options.xAxis.gran)
     throw 'Option granY must be less than or equal to granX.';
 
   // Default maxDate is today night
@@ -180,7 +179,7 @@ Calendar.prototype.setDataFromResults = function(results, dateMapper, valueMappe
         val  = valueMapper(results[r]);
 
     // Find the lowest date from a time interval where the date belongs to (based on granularity)
-    lowerDate = this.floorDate(date, this.options.granY)
+    lowerDate = this.floorDate(date, this.options.yAxis.gran)
 
     // Store minimum value
     if (minVal == null || minVal > val)
@@ -240,7 +239,7 @@ Calendar.prototype.floorDate = function(date, granularity) {
  * @param date a Date object
  * */
 Calendar.prototype.getCol = function(date) {
-  var granX      = this.options.granX;
+  var granX      = this.options.xAxis.gran;
   var flrDate    = this.floorDate(date, granX);
   var flrMinDate = this.floorDate(this.options.minDate, granX);
 
@@ -253,8 +252,8 @@ Calendar.prototype.getCol = function(date) {
  * @param date a Date object
  * */
 Calendar.prototype.getRow = function(date) {
-  var granY  = this.options.granY,
-      granX  = this.options.granX;
+  var granY  = this.options.yAxis.gran,
+      granX  = this.options.xAxis.gran;
   var floor0 = this.floorDate(date, granX),
       floorN = this.floorDate(date, granY);
   var delta  = floorN - floor0;
@@ -276,9 +275,9 @@ Calendar.prototype.getRectIndex = function(date) {
  * */
 Calendar.prototype.getColumnsCount = function() {
   // var tomorrow = new Date(this.options.maxDate.getTime() + 87400000);
-  var flrMinDate = this.floorDate(this.options.minDate, this.options.granX);
-  var flrMaxDate = this.floorDate(this.options.maxDate, this.options.granX);
-  return Math.ceil(Math.abs(flrMaxDate - flrMinDate) / Calendar.granMilliseconds[this.options.granX]);
+  var flrMinDate = this.floorDate(this.options.minDate, this.options.xAxis.gran);
+  var flrMaxDate = this.floorDate(this.options.maxDate, this.options.xAxis.gran);
+  return Math.ceil(Math.abs(flrMaxDate - flrMinDate) / Calendar.granMilliseconds[this.options.xAxis.gran]);
 }
 
 
@@ -286,7 +285,7 @@ Calendar.prototype.getColumnsCount = function() {
  *
  * */
 Calendar.prototype.getRowsCount = function() {
-  return Calendar.granMilliseconds[this.options.granX] / Calendar.granMilliseconds[this.options.granY];
+  return Calendar.granMilliseconds[this.options.xAxis.gran] / Calendar.granMilliseconds[this.options.yAxis.gran];
 }
 
 
@@ -295,7 +294,7 @@ Calendar.prototype.getRowsCount = function() {
  * */
 Calendar.prototype.getColNames = function() {
   var ret = [];
-  var gran = this.options.granX;
+  var gran = this.options.xAxis.gran;
 
   var flrMinDate = this.floorDate(this.options.minDate, gran);
   var colsCount = this.getColumnsCount();
@@ -320,7 +319,7 @@ Calendar.prototype.getRowNames = function() {
 
   for (var i=0;i<rowsCount; i++) {
     // A range of granularity greater than or equal to DAY must not start with 0
-    ret.push( i + (this.options.granY >= Calendar.gran.DAY ? 1 : 0) )
+    ret.push( i + (this.options.yAxis.gran >= Calendar.gran.DAY ? 1 : 0) )
   }
 
   return ret;
@@ -393,6 +392,7 @@ Calendar.prototype.renderRects = function(elem, width, height) {
   if (this.canvas.rect == undefined)
     this.canvas.rect = this.canvas.svg.append('g').classed('rect', true);
 
+
   // Render rectangles
   var self = this;
   this.canvas.rect
@@ -400,12 +400,17 @@ Calendar.prototype.renderRects = function(elem, width, height) {
     .attr('stroke', '#eee')
     .attr('stroke-width', '0.05')
     .selectAll('rect')
-    .data(function(d) { return self.getDateRange(self.options.minDate, self.options.maxDate, self.options.granY); })
+    .data(function(d) { return self.getDateRange(self.options.minDate, self.options.maxDate, self.options.yAxis.gran); })
     .enter().append('rect')
       .attr("width", cellWidth)
       .attr("height", cellHeight)
       .attr("x", function(val, index) {return self.getCol(val) * cellWidth;})
-      .attr("y", function(val, index) {return (cellHeight*rowsCount) - (self.getRow(val) * cellHeight) - cellHeight;})
+      .attr("y", function(val, index) {
+        if (self.options.yAxis.flip)
+          return (cellHeight*rowsCount) - (self.getRow(val) * cellHeight) - cellHeight;
+        else
+          return self.getRow(val) * cellHeight;
+      })
       .datum(d3.timeFormat(Calendar.timeFormat))
     .exit()
 
