@@ -16,9 +16,14 @@ function extend(){
  * */
 var Calendar = function(options) {
   this.canvas = {};
+  this.data = {};
   this._init(options);
 }
 
+
+/* Time format used in data hash table
+* */
+Calendar.timeFormat = "%Y-%m-%d %H:%M:%S.%L"
 
 /* Data granularity enum
  * 
@@ -48,6 +53,58 @@ Calendar.granMilliseconds = [
 ]
 
 
+/* Returns a unit (second, minute, ...) from the given date
+ * based on the granularity
+ * 
+ * @param date Date()
+ * @param gran Granularity
+ *
+ * */
+Calendar.prototype.getDateUnit = function(date, gran) {
+  if (gran == Calendar.gran.MILLISECOND)
+    return date.getMilliseconds();
+  if (gran == Calendar.gran.SECOND)
+    return date.getSeconds();
+  else if (gran == Calendar.gran.MINUTE)
+    return date.getMinutes();
+  else if (gran == Calendar.gran.HOUR)
+    return date.getHours();
+  else if (gran == Calendar.gran.DAY)
+    return date.getDate();
+  else if (gran == Calendar.gran.MONTH)
+    return date.getMonth();
+  else if (gran == Calendar.gran.YEAR)
+    return date.getYear();
+  else throw 'Unknown granularity ' + gran;
+}
+
+
+/* Returns a D3 time range based on the given granularity
+ * 
+ * @param minDate lower time limit
+ * @param maxDate upper time limit
+ * @param gran Granularity
+ *
+ * */
+Calendar.prototype.getDateRange = function(minDate, maxDate, gran) {
+  if (gran == Calendar.gran.MILLISECOND)
+    return d3.timeMilliseconds(minDate, maxDate);
+  if (gran == Calendar.gran.SECOND)
+    return d3.timeSeconds(minDate, maxDate);
+  else if (gran == Calendar.gran.MINUTE)
+    return d3.timeMinutes(minDate, maxDate);
+  else if (gran == Calendar.gran.HOUR)
+    return d3.timeHours(minDate, maxDate);
+  else if (gran == Calendar.gran.DAY)
+    return d3.timeDays(minDate, maxDate);
+  else if (gran == Calendar.gran.MONTH)
+    return d3.timeMonths(minDate, maxDate);
+  else if (gran == Calendar.gran.YEAR)
+    return d3.timeYears(minDate, maxDate);
+  else throw 'Unknown granularity ' + gran;
+}
+
+
 /* Init calendar from options
  * 
  * @param options Calendar options
@@ -58,67 +115,100 @@ Calendar.prototype._init = function(options) {
   this.options = extend({}, {
     wrapper:    'body',
     width:      800,
-    height:     300,
+    height:     400,
     responsive: false,
+    x : {
+      gran: Calendar.gran.DAY
+    },
+    y : {
+      gran: Calendar.gran.HOUR
+    },
     granX:      Calendar.gran.DAY,
-    granY:      Calendar.gran.HOUR,
+    granY:      Calendar.gran.HOUR, // Must be less than or equal to granX
     minDate:    null,
     maxDate:    null,
+    showXAxis:  true,
+    showYAxis:  true,
+    colorRange: ["#ffffff", "#f6fafd", "#edf6fc", "#e3f0fa", "#daebf8", "#d1e7f6", "#c8e2f5", "#bfdef3", "#b6d9f2", "#a4c9e4", "#8fb5d2", "#7aa1bf", "#658dad", "#4f799b", "#3a6488", "#244f75", "#0f3b63", "#012d56", "#012b52", "#01294d", "#002649", "#002444", "#002140", "#00203d", "#001d38"],
   }, options);
 
-  // Default maxDate is now
-  if (this.options.maxDate === null)
+  if (this.options.granY > this.options.granX)
+    throw 'Option granY must be less than or equal to granX.';
+
+  // Default maxDate is today night
+  if (this.options.maxDate === null) {
     this.options.maxDate = new Date();
+    this.options.maxDate.setHours(23);
+    this.options.maxDate.setMinutes(59);
+  }
  
   // default minDate to today - 1 month
   if (this.options.minDate === null) {
-    var minDate = new Date();
-
-    // January -> December last year
-    if (minDate.getMonth() == 1) {
-      minDate.setMonth(12);
-      minDate.setYear(minDate.getYear()-1);
-    } else {
-      minDate.setMonth(minDate.getMonth()-1);9
-    }
-    this.options.minDate = minDate;
+    var d = new Date();
+    this.options.minDate = new Date(d.getTime() - (30 * 24 * 60 * 60 * 1000));
   }
 }
 
-/* Sets calendar data
+/* Transforms InfluxDB result to Calendar data
  *
- * Data is expected to be an array objects in following format:
- * {
- *   date: Date,
- *   val: float
- * }
+ * @param results array of result objects
+ * @param dateMapper function to be used to find a date in an object within the results
+ * @param valueMapper function to be used to find the value in an object within the results
+ *
  * */
-Calendar.prototype.setData = function(data) {
-  this.data.data = data;
-  this.data.minDate = null;
-  this.data.maxDate = null;
+Calendar.prototype.setDataFromResults = function(results, dateMapper, valueMapper) {
 
-  for (var i=0; i<data.length; i++) {
-    // Data item object must contain the key 'date'
-    // data[i].date must be a Date object
-    if (!data[i].date instanceof Date)
-      continue;
+  var data   = {},
+      minVal = null,
+      maxVal = null,
+      formatter = d3.timeFormat("%Y-%m-%d %H:%M:%S.%L");
 
-    // Append to object data
-    this.data.data.push(data[i]);
+  if (dateMapper == undefined)
+    dateMapper = function(obj) {
+      return new Date(obj.key);
+    }
 
-    // Min date
-    if (this.data.minDate == null)
-      this.data.minDate = data[i].date;
-    else if (this.data.minDate > data[i])
-      this.data.minDate = data[i].date;
+  if (valueMapper == undefined)
+    valueMapper = function(obj) {
+      return obj.doc_count;
+    }
+  
+  for (r in results) {
+    var key,
+        lowerDate,
+        date = dateMapper(results[r]);
+        val  = valueMapper(results[r]);
 
-    // Max date
-    if (this.data.maxDate == null)
-      this.data.maxDate = data[i].date;
-    else if (this.data.maxDate < data[i])
-      this.data.maxDate = data[i].date;
+    // Find the lowest date from a time interval where the date belongs to (based on granularity)
+    lowerDate = this.floorDate(date, this.options.granY)
+
+    // Store minimum value
+    if (minVal == null || minVal > val)
+      minVal = val;
+
+    // Store maximum value
+    if (maxVal == null || maxVal < val)
+      maxVal = val;
+
+    // Store data
+    key = formatter(lowerDate);
+    if (data[key] == undefined)
+      data[key] = 0;
+    data[key] += val;
   }
+
+  this.data = data;
+  this.minVal = minVal;
+  this.maxVal = maxVal;
+
+  return data;
+  // return {
+  //   '2017-03-20 19:00:00.000' : 3,
+  //   '2017-03-21 12:00:00.000' : 2,
+  //   '2017-03-14 08:00:00.000' : 20,
+  //   '2017-03-02 12:00:00.000' : 12,
+  //   '2017-03-11 16:00:00.000' : 89,
+  // }
 }
 
 /* Returns a date object that represents a start of a date interval
@@ -132,22 +222,15 @@ Calendar.prototype.setData = function(data) {
  * */
 Calendar.prototype.floorDate = function(date, granularity) {
   var retDate = new Date(date.getTime());
-  
-  // floor seconds
   retDate.setMilliseconds(0);
-  // floor minute
   if (granularity >= Calendar.gran.MINUTE)
     retDate.setSeconds(0);
-  // floor hour
   if (granularity >= Calendar.gran.HOUR)
     retDate.setMinutes(0);
-  // floor day
   if (granularity >= Calendar.gran.DAY)
     retDate.setHours(0);
-  // floor month
   if (granularity >= Calendar.gran.MONTH)
     retDate.setDate(1);
-
   return retDate;
 }
 
@@ -170,24 +253,13 @@ Calendar.prototype.getCol = function(date) {
  * @param date a Date object
  * */
 Calendar.prototype.getRow = function(date) {
-  var granY      = this.options.granY;
+  var granY  = this.options.granY,
+      granX  = this.options.granX;
+  var floor0 = this.floorDate(date, granX),
+      floorN = this.floorDate(date, granY);
+  var delta  = floorN - floor0;
 
-  if (granY == Calendar.gran.MILLISECOND)
-    return date.getMilliseconds();
-  if (granY == Calendar.gran.SECOND)
-    return date.getSeconds();
-  else if (granY == Calendar.gran.MINUTE)
-    return date.getMinutes();
-  else if (granY == Calendar.gran.HOUR)
-    return date.getHours();
-  else if (granY == Calendar.gran.DAY)
-    return date.getDate()-1;
-  else if (granY == Calendar.gran.MONTH)
-    return date.getMonth()-1;
-  else if (granY == Calendar.gran.YEAR)
-    return date.getYear()-1;
-
-  throw 'Unknown granularity ' + granY;
+  return delta / Calendar.granMilliseconds[granY];
 }
 
 /* Returns the index of the rect that holds data for the specified date
@@ -203,9 +275,10 @@ Calendar.prototype.getRectIndex = function(date) {
  *
  * */
 Calendar.prototype.getColumnsCount = function() {
-  var flrMinDate = this.floorDate(this.options.minDate, gran);
-  var flrMaxDate = this.floorDate(this.options.maxDate, gran);
-  return Math.abs(flrMaxDate - flrMinDate) / Calendar.granMilliseconds[gran];
+  // var tomorrow = new Date(this.options.maxDate.getTime() + 87400000);
+  var flrMinDate = this.floorDate(this.options.minDate, this.options.granX);
+  var flrMaxDate = this.floorDate(this.options.maxDate, this.options.granX);
+  return Math.ceil(Math.abs(flrMaxDate - flrMinDate) / Calendar.granMilliseconds[this.options.granX]);
 }
 
 
@@ -213,7 +286,7 @@ Calendar.prototype.getColumnsCount = function() {
  *
  * */
 Calendar.prototype.getRowsCount = function() {
-  return this.getRowNames().length;
+  return Calendar.granMilliseconds[this.options.granX] / Calendar.granMilliseconds[this.options.granY];
 }
 
 
@@ -222,29 +295,14 @@ Calendar.prototype.getRowsCount = function() {
  * */
 Calendar.prototype.getColNames = function() {
   var ret = [];
-  var gran      = this.options.granX;
+  var gran = this.options.granX;
 
   var flrMinDate = this.floorDate(this.options.minDate, gran);
-  var flrMaxDate = this.floorDate(this.options.maxDate, gran);
-  var colsCount = Math.abs(flrMaxDate - flrMinDate) / Calendar.granMilliseconds[gran];
-
+  var colsCount = this.getColumnsCount();
 
   for (var i=0, time=flrMinDate.getTime(); i<colsCount; i++) {
     var date = new Date(time);
-    if (gran == Calendar.gran.MILLISECOND)
-      name = date.getMilliseconds() + ' ';
-    if (gran == Calendar.gran.SECOND)
-      name = date.getSeconds() + ' ';
-    else if (gran == Calendar.gran.MINUTE)
-      name = date.getMinutes() + ' ';
-    else if (gran == Calendar.gran.HOUR)
-      name = date.getHours() + ' ';
-    else if (gran == Calendar.gran.DAY)
-      name = date.getDate() + ' ';
-    else if (gran == Calendar.gran.MONTH)
-      name = date.getMonth()-1 + ' ';
-    else if (gran == Calendar.gran.YEAR)
-      name = date.getYear()-1 + ' ';
+    name = this.getDateUnit(date, gran);
     ret.push(name);
     time = time + Calendar.granMilliseconds[gran]
   }
@@ -253,102 +311,33 @@ Calendar.prototype.getColNames = function() {
 
 }
 
-/* Returns an array of row names based on the options
+/* Returns an array of row names based on the granularity in options
  *
  * */
 Calendar.prototype.getRowNames = function() {
   var ret = [];
-  var gran      = this.options.granY;
+  var rowsCount = this.getRowsCount();
 
-  if (gran == Calendar.gran.MILLISECOND)
-    name = date.getMilliseconds() + ' ';
-  if (gran == Calendar.gran.SECOND)
-    return [  0,  1,  2,  3,  4,  5,  6,  7,  8,  9,
-             10, 11, 12, 13, 14, 15, 16, 17, 18, 19,
-             20, 21, 22, 23, 24, 25, 26, 27, 28, 29,
-             30, 31, 32, 33, 34, 35, 36, 37, 38, 39,
-             40, 41, 42, 43, 44, 45, 46, 47, 48, 49,
-             50, 51, 52, 53, 54, 55, 56, 57, 58, 59];
-  else if (gran == Calendar.gran.MINUTE)
-    return [  0,  1,  2,  3,  4,  5,  6,  7,  8,  9,
-             10, 11, 12, 13, 14, 15, 16, 17, 18, 19,
-             20, 21, 22, 23, 24, 25, 26, 27, 28, 29,
-             30, 31, 32, 33, 34, 35, 36, 37, 38, 39,
-             40, 41, 42, 43, 44, 45, 46, 47, 48, 49,
-             50, 51, 52, 53, 54, 55, 56, 57, 58, 59];
-  else if (gran == Calendar.gran.HOUR)
-    return [  0,  1,  2,  3,  4,  5,  6,  7,  8,  9,
-             10, 11, 12, 13, 14, 15, 16, 17, 18, 19,
-             20, 21, 22, 23];
-  else if (gran == Calendar.gran.DAY)
-    return [  0,  1,  2,  3,  4,  5,  6,  7,  8,  9,
-             10, 11, 12, 13, 14, 15, 16, 17, 18, 19,
-             20, 21, 22, 23, 24, 25, 26, 27, 28, 29,
-             30, 31];
-  else if (gran == Calendar.gran.MONTH)
-    return [  0,  1,  2,  3,  4,  5,  6,  7,  8,  9,
-             10, 11, 12];
-  else
-    throw "Incompatible granularity";
+  for (var i=0;i<rowsCount; i++) {
+    // A range of granularity greater than or equal to DAY must not start with 0
+    ret.push( i + (this.options.granY >= Calendar.gran.DAY ? 1 : 0) )
+  }
 
+  return ret;
 }
 
-/* Returns X coordinate of the rectangle that represents the given date
+
+/* Renders X Axis
  *
- * @param date a Date object
  * */
-Calendar.prototype.getX = function(date) {
-  
-}
-
-/* Returns Y coordinate of the rectangle that represents the given date
- *
- * @param date a Date object
- * */
-Calendar.prototype.getX = function(date) {
-  ;
-}
-
-/* Renders the calendar
- *
- * @param date a Date object
- * */
-Calendar.prototype.render = function() {
-  // Attributes
-  var columnsNames = this.getColNames();
-  var columnsCount = columnsNames.length;
-  var rowsNames = this.getRowNames();
-  var rowsCount = rowsNames.length;
-
-  var paddingLeft = 10;
-  var paddingRight = 10;
-  var paddingTop = 10;
-  var paddingBottom = 10;
-
-  var cellWidth = Math.ceil((this.options.width - paddingLeft - paddingRight) / columnsCount);
-  var cellHeight = Math.ceil((this.options.height - paddingTop - paddingBottom) / rowsCount);
-
-  // Init canvas if needed
-  if (this.canvas.svg == undefined)
-    this.canvas.svg = d3.select(this.options.wrapper)
-            .append("svg")
-              .attr("width", this.options.width)
-              .attr("height", this.options.height)
-              .append('g').classed('svg', true);
+Calendar.prototype.renderXAxis = function() {
+  var rowsCount  = this.getRowsCount(),
+      cellHeight = (this.options.height) / rowsCount,
+      cellWidth  = (this.options.width) / columnsCount;
 
   // Init textXAxis if needed
   if (this.canvas.textXAxis == undefined)
     this.canvas.textXAxis = this.canvas.svg.append('g').classed('textXAxis', true);
-
-  // Init textYAxis if needed
-  if (this.canvas.textYAxis == undefined)
-    this.canvas.textYAxis = this.canvas.svg.append('g').classed('textYAxis', true);
-
-  // Init rect if needed
-  if (this.canvas.rect == undefined)
-    this.canvas.rect = this.canvas.svg.append('g').classed('rect', true);
-
-
 
   // Render texts on X Axis
   this.canvas.textXAxis.selectAll('text')
@@ -361,6 +350,21 @@ Calendar.prototype.render = function() {
         .text(function(val, index, data) { return val; });
   this.canvas.textXAxis.exit().remove();
 
+}
+
+
+/* Renders Y Axis
+ *
+ * */
+Calendar.prototype.renderYAxis = function() {
+  var rowsCount  = this.getRowsCount();
+  var cellHeight = (this.options.height) / rowsCount;
+
+  // Init textYAxis if needed
+  if (this.canvas.textYAxis == undefined)
+    this.canvas.textYAxis = this.canvas.svg.append('g').classed('textYAxis', true);
+
+
   // Render texts on Y Axis
   this.canvas.textYAxis.selectAll('text')
       .data(this.getRowNames())
@@ -371,25 +375,81 @@ Calendar.prototype.render = function() {
         .attr('font-size', 12)
         .text(function(val, index, data) { return val; });
   this.canvas.textXAxis.exit().remove();
+}
+
+
+/* Renders the rectangles.
+ *
+ * @param elem the element to render rectangles to
+ * @param width width of the graph
+ * @param height hight of the graph
+ * */
+Calendar.prototype.renderRects = function(elem, width, height) {
+  var cellWidth  = (this.options.width) / this.getColumnsCount(),
+      cellHeight = (this.options.height) / this.getRowsCount(),
+      rowsCount  = this.getRowsCount();
+
+  // Init rect if needed
+  if (this.canvas.rect == undefined)
+    this.canvas.rect = this.canvas.svg.append('g').classed('rect', true);
 
   // Render rectangles
+  var self = this;
   this.canvas.rect
     .attr('fill', 'none')
-    .attr('stroke', '#ccc')
+    .attr('stroke', '#eee')
+    .attr('stroke-width', '0.05')
     .selectAll('rect')
-    .data(function() {
-      var ret = [];
-      for (var i=0; i<columnsCount; i++)
-        for (var j=0; j<rowsCount; j++)
-          ret.push(0);
-      return ret;
-    })
+    .data(function(d) { return self.getDateRange(self.options.minDate, self.options.maxDate, self.options.granY); })
     .enter().append('rect')
       .attr("width", cellWidth)
       .attr("height", cellHeight)
-      .attr("x", function(val, index) {return Math.floor(index/rowsCount) * cellWidth;})
-      .attr("y", function(val, index) {return (cellHeight*rowsCount) - ((index%rowsCount) * cellHeight) - cellHeight;})
+      .attr("x", function(val, index) {return self.getCol(val) * cellWidth;})
+      .attr("y", function(val, index) {return (cellHeight*rowsCount) - (self.getRow(val) * cellHeight) - cellHeight;})
+      .datum(d3.timeFormat(Calendar.timeFormat))
+    .exit()
+
+  // The color range to be used for the data
+  var color = d3.scaleQuantile()
+    .domain([0, this.maxVal])
+    .range(this.options.colorRange);
+
+  
+  // Fill rectangles with color based on data
+  this.canvas.rect.selectAll('rect')
+    .filter(function(d) { return d in self.data; })
+    .attr("fill", function(d, a) { return color(self.data[d]); })
+ //   .attr("stroke", function(d, a) { return color(self.data[d]); })
+}
+
+/* Renders the calendar
+ *
+ * */
+Calendar.prototype.render = function() {
+  // Attributes
+
+  var cellWidth = ((this.options.width) / this.getColumnsCount());
+  var cellHeight = ((this.options.height) / this.getRowsCount());
+
+  console.log('columnsCount, rowsCount', this.getColumnsCount(), this.getRowsCount());
+  console.log('cellWidth, cellHeight', cellWidth, cellHeight);
+  console.log('minDate, maxDate', this.options.minDate, this.options.maxDate)
+
+  // Init canvas if needed
+  if (this.canvas.svg == undefined)
+    this.canvas.svg = d3.select(this.options.wrapper)
+            .append("svg")
+              .attr("width", this.options.width)
+              .attr("height", this.options.height)
+              .append('g').classed('svg', true);
+
+  // if (this.options.showXAxis)
+  //   this.renderXAxis();
+
+  // if (this.)
+  this.renderRects();
+  console.log(this);
 
   return;
-
 }
+
