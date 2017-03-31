@@ -155,9 +155,9 @@ Calendar.prototype._init = function(options) {
  * @param valueMapper function to be used to find the value in an object within the results
  *
  * */
-Calendar.prototype.setDataFromResults = function(results, dateMapper, valueMapper) {
+Calendar.prototype.setData = function(data, dateMapper, valueMapper) {
 
-  var data   = {},
+  var res   = {},
       minVal = null,
       maxVal = null,
       formatter = d3.timeFormat("%Y-%m-%d %H:%M:%S.%L");
@@ -172,11 +172,11 @@ Calendar.prototype.setDataFromResults = function(results, dateMapper, valueMappe
       return obj.doc_count;
     }
   
-  for (r in results) {
+  for (r in data) {
     var key,
         lowerDate,
-        date = dateMapper(results[r]);
-        val  = valueMapper(results[r]);
+        date = dateMapper(data[r]);
+        val  = valueMapper(data[r]);
 
     // Find the lowest date from a time interval where the date belongs to (based on granularity)
     lowerDate = this.floorDate(date, this.options.yAxis.gran)
@@ -191,23 +191,16 @@ Calendar.prototype.setDataFromResults = function(results, dateMapper, valueMappe
 
     // Store data
     key = formatter(lowerDate);
-    if (data[key] == undefined)
-      data[key] = 0;
-    data[key] += val;
+    if (res[key] == undefined)
+      res[key] = 0;
+    res[key] += val;
   }
 
-  this.data = data;
+  this.data = res;
   this.minVal = minVal;
   this.maxVal = maxVal;
 
-  return data;
-  // return {
-  //   '2017-03-20 19:00:00.000' : 3,
-  //   '2017-03-21 12:00:00.000' : 2,
-  //   '2017-03-14 08:00:00.000' : 20,
-  //   '2017-03-02 12:00:00.000' : 12,
-  //   '2017-03-11 16:00:00.000' : 89,
-  // }
+  return res;
 }
 
 /* Returns a date object that represents a start of a date interval
@@ -360,7 +353,6 @@ Calendar.prototype.renderYAxis = function(elem, graphHeight, fontSize) {
     fontSize = 12;
 
   // Render texts on Y Axis
-  console.log(this.getRowNames());
   var self = this;
   yAxis.selectAll('text')
       .data(this.getRowNames())
@@ -430,7 +422,7 @@ Calendar.prototype.renderRects = function(elem, width, height) {
  * */
 Calendar.prototype.render = function() {
 
-  var yAxisWidth    = (this.options.yAxis.show ? 30 : 0),
+  var yAxisWidth    = (this.options.yAxis.show ? 20 : 0),
       xAxisHeight   = (this.options.xAxis.show ? 15 : 0),
       yAxisFontSize = 12;
 
