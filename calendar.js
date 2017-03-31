@@ -431,10 +431,6 @@ Calendar.prototype.render = function() {
   var cellWidth = ((this.options.width) / this.getColumnsCount());
   var cellHeight = ((this.options.height) / this.getRowsCount());
 
-  console.log('columnsCount, rowsCount', this.getColumnsCount(), this.getRowsCount());
-  console.log('cellWidth, cellHeight', cellWidth, cellHeight);
-  console.log('minDate, maxDate', this.options.minDate, this.options.maxDate)
-
   // Init canvas if needed
   if (this.canvas.svg == undefined)
     this.canvas.svg = d3.select(this.options.wrapper)
@@ -443,13 +439,7 @@ Calendar.prototype.render = function() {
               .attr("height", this.options.height)
               .append('g').classed('svg', true);
 
-  // if (this.options.showXAxis)
-  //   this.renderXAxis();
-
-  // if (this.)
+ 
   this.renderRects();
-  console.log(this);
-
-  return;
 }
 
