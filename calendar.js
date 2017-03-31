@@ -337,6 +337,7 @@ Calendar.prototype.renderXAxis = function(elem, graphWidth, fontSize) {
           return 'translate('+(index*cellWidth)+', 0)';
         })
         .attr('font-size', fontSize)
+        .attr('font-family', 'Arial')
         .text(function(val, index, data) { return val; });
 
 }
@@ -364,6 +365,7 @@ Calendar.prototype.renderYAxis = function(elem, graphHeight, fontSize) {
             return 'translate(0, '+(((index+1)*cellHeight) - 2)+')';
         })
         .attr('font-size', fontSize)
+        .attr('font-family', 'Arial')
         .text(function(val, index, data) { return val; });
 }
 
