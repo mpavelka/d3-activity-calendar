@@ -48,8 +48,8 @@ Calendar.granMilliseconds = [
   1000*60,// Calendar.gran.MINUTE
   1000*60*60,// Calendar.gran.HOUR
   1000*60*60*24,// Calendar.gran.DAY
-  1000*60*60*24*30, // Calendar.gran.MONTH
-  1000*60*60*24*30*12, // Calendar.gran.YEAR
+  1000*60*60*24*31, // Calendar.gran.MONTH
+  1000*60*60*24*31*12, // Calendar.gran.YEAR
 ]
 
 
@@ -144,7 +144,7 @@ Calendar.prototype._init = function(options) {
   // default minDate to today - 1 month
   if (this.options.minDate === null) {
     var d = new Date();
-    this.options.minDate = new Date(d.getTime() - (30 * 24 * 60 * 60 * 1000));
+    this.options.minDate = new Date(d.getTime() - (31 * 24 * 60 * 60 * 1000));
   }
 }
 
