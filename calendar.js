@@ -147,6 +147,9 @@ Calendar.prototype._init = function(options) {
   if (this.options.minDate === null) {
     var d = new Date();
     this.options.minDate = new Date(d.getTime() - (31 * 24 * 60 * 60 * 1000));
+
+    //TODO: Zeroed part needs to be based on xAxis granularity
+    this.options.minDate.setHours(0,0,0,0);
   }
 }
 
