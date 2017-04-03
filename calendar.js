@@ -414,6 +414,7 @@ Calendar.prototype.renderRects = function(elem, width, height) {
   rect.selectAll('rect')
     .filter(function(d) { return d in self.data; })
     .attr("fill", function(d, a) { return color(self.data[d]); })
+    .insert("title",":first-child").html(function(d) { return d} )
 
   return rect;
 
