@@ -48,8 +48,8 @@ Calendar.granMilliseconds = [
   1000*60,// Calendar.gran.MINUTE
   1000*60*60,// Calendar.gran.HOUR
   1000*60*60*24,// Calendar.gran.DAY
-  1000*60*60*24*30, // Calendar.gran.MONTH
-  1000*60*60*24*30*12, // Calendar.gran.YEAR
+  1000*60*60*24*31, // Calendar.gran.MONTH
+  1000*60*60*24*31*12, // Calendar.gran.YEAR
 ]
 
 
@@ -128,7 +128,9 @@ Calendar.prototype._init = function(options) {
       flip: false,
       show: true,
     },
-    colorRange: ["#ffffff", "#f6fafd", "#edf6fc", "#e3f0fa", "#daebf8", "#d1e7f6", "#c8e2f5", "#bfdef3", "#b6d9f2", "#a4c9e4", "#8fb5d2", "#7aa1bf", "#658dad", "#4f799b", "#3a6488", "#244f75", "#0f3b63", "#012d56", "#012b52", "#01294d", "#002649", "#002444", "#002140", "#00203d", "#001d38"],
+    //colorRange: ["#ffffff", "#f6fafd", "#edf6fc", "#e3f0fa", "#daebf8", "#d1e7f6", "#c8e2f5", "#bfdef3", "#b6d9f2", "#a4c9e4", "#8fb5d2", "#7aa1bf", "#658dad", "#4f799b", "#3a6488", "#244f75", "#0f3b63", "#012d56", "#012b52", "#01294d", "#002649", "#002444", "#002140", "#00203d", "#001d38"],
+    //colorRange: ["#00007f","#0000a3","#0000c8","#0000ec","#0004ff","#0024ff","#0044ff","#0064ff","#0088ff","#00a8ff","#00c8ff","#02e8f4","#1fffd7","#39ffbd","#53ffa3","#6cff89","#89ff6c","#a3ff53","#bdff39","#d7ff1f","#f4f802","#ffda00","#ffbd00","#ff9f00","#ff7e00","#ff6000","#ff4200","#ff2500","#ec0300","#c80000","#a30000","#7f0000"],
+    colorRange: ["#f7fbff","#f0f6fc","#eaf2fa","#e4eef8","#ddeaf6","#d7e6f4","#d1e2f2","#cbdef0","#c3d9ee","#b9d5ea","#afd1e6","#a5cde3","#98c7df","#8bc0dd","#7fb8da","#72b1d7","#65aad3","#5aa3cf","#509bcb","#4694c7","#3c8cc3","#3383be","#2b7bba","#2373b6","#1b6aaf","#1562a9","#0f5aa3","#08529c","#08488f","#084083","#083877","#08306b"],
   }, options);
 
   if (this.options.yAxis.gran > this.options.xAxis.gran)
@@ -144,7 +146,10 @@ Calendar.prototype._init = function(options) {
   // default minDate to today - 1 month
   if (this.options.minDate === null) {
     var d = new Date();
-    this.options.minDate = new Date(d.getTime() - (30 * 24 * 60 * 60 * 1000));
+    this.options.minDate = new Date(d.getTime() - (31 * 24 * 60 * 60 * 1000));
+
+    //TODO: Zeroed part needs to be based on xAxis granularity
+    this.options.minDate.setHours(0,0,0,0);
   }
 }
 
@@ -197,7 +202,7 @@ Calendar.prototype.setData = function(data, dateMapper, valueMapper) {
   }
 
   this.data = res;
-  this.minVal = minVal;
+  this.minVal = 0;
   this.maxVal = maxVal;
 
   return res;
@@ -293,10 +298,10 @@ Calendar.prototype.getColNames = function() {
   var colsCount = this.getColumnsCount();
 
   for (var i=0, time=flrMinDate.getTime(); i<colsCount; i++) {
+    time = time + Calendar.granMilliseconds[gran];
     var date = new Date(time);
     name = this.getDateUnit(date, gran);
     ret.push(name);
-    time = time + Calendar.granMilliseconds[gran]
   }
 
   return ret;
@@ -334,10 +339,11 @@ Calendar.prototype.renderXAxis = function(elem, graphWidth, fontSize) {
       .data(this.getColNames())
       .enter().append('text')
         .attr('transform', function(val, index) {
-          return 'translate('+(index*cellWidth)+', 0)';
+          return 'translate('+((index*cellWidth)+(cellWidth/2))+', 0)';
         })
         .attr('font-size', fontSize)
         .attr('font-family', 'Arial')
+        .attr('text-anchor', 'middle')
         .text(function(val, index, data) { return val; });
 
 }
@@ -404,16 +410,22 @@ Calendar.prototype.renderRects = function(elem, width, height) {
       .datum(d3.timeFormat(Calendar.timeFormat))
     .exit()
 
-  // The color range to be used for the data
-  var color = d3.scaleQuantile()
-    .domain([0, this.maxVal])
-    .range(this.options.colorRange);
+  var domain = new Array(this.options.colorRange.length);
+  for (i = 0; i < domain.length; ++i) {
+    domain[i] = i * ((this.maxVal-30000) / domain.length);
+  }
 
+  // The color range to be used for the data
+  var color = d3.scalePow()
+  //var color = d3.scaleLog()
+    .domain(domain)
+    .range(this.options.colorRange);
   
   // Fill rectangles with color based on data
   rect.selectAll('rect')
     .filter(function(d) { return d in self.data; })
     .attr("fill", function(d, a) { return color(self.data[d]); })
+    .insert("title",":first-child").html(function(d) { return d} )
 
   return rect;
 

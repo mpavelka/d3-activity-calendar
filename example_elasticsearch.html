@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>Activity Calendar</title>
+</head>
+<body>
+
+<div class="my-wrapper" style="width: 100%;"></div>
+
+<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/json2/20160511/json2.min.js"></script>
+<script src="https://d3js.org/d3.v4.min.js"></script>
+<script type="text/javascript" src="calendar.js"></script>
+
+<script type="text/javascript">
+
+	var calendar = new Calendar({
+		wrapper: '.my-wrapper',
+		width: (1400),
+		height: ((24*60)/2) + 15,
+		xAxis: { gran: Calendar.gran.DAY, show: true },
+		yAxis: { gran: Calendar.gran.MINUTE, show: false },
+	});
+
+	// Construct ElasticSearch query
+	// It aggregates results into a per-hour buckets
+	var es_query = JSON.stringify({
+		query: {
+			bool: {
+				must: [
+					//{ "exists": { "field": "audit_type" } },
+					//{ match: { level: { query: "WARN", type: "phrase" } } },
+					{ range: { "@timestamp": { "gt" : "now-32d" }  } }
+				]
+			}
+		},
+		aggs: {
+			by_time: {
+				date_histogram: {
+					field : "@timestamp",
+					interval : "minute"
+				}
+			}
+		},
+		size: 0
+	});
+
+	// Elastic seaarch URL
+	var es_url = "/es/log-*/_search";
+
+	var http = new XMLHttpRequest();
+	http.open("POST", es_url, true);
+	http.setRequestHeader("Content-type", "application/json");
+	http.onreadystatechange = function() {
+		if(http.readyState == 4 && http.status == 200) {
+			var data = JSON.parse(http.responseText);
+			calendar.setData(
+				data.aggregations.by_time.buckets,
+				function mapDate(o) { return new Date(o.key) },
+				function mapValue(o) { return o.doc_count }
+			);
+			calendar.render();
+		}
+	}
+	http.send(es_query);
+	
+</script>
+</body>
+</html>
