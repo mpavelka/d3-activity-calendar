@@ -339,10 +339,11 @@ Calendar.prototype.renderXAxis = function(elem, graphWidth, fontSize) {
       .data(this.getColNames())
       .enter().append('text')
         .attr('transform', function(val, index) {
-          return 'translate('+(index*cellWidth)+', 0)';
+          return 'translate('+((index*cellWidth)+(cellWidth/2))+', 0)';
         })
         .attr('font-size', fontSize)
         .attr('font-family', 'Arial')
+        .attr('text-anchor', 'middle')
         .text(function(val, index, data) { return val; });
 
 }
