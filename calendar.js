@@ -409,11 +409,16 @@ Calendar.prototype.renderRects = function(elem, width, height) {
       .datum(d3.timeFormat(Calendar.timeFormat))
     .exit()
 
-  // The color range to be used for the data
-  var color = d3.scaleQuantile()
-    .domain([0, this.maxVal])
-    .range(this.options.colorRange);
+  var domain = new Array(this.options.colorRange.length);
+  for (i = 0; i < domain.length; ++i) {
+    domain[i] = i * ((this.maxVal-30000) / domain.length);
+  }
 
+  // The color range to be used for the data
+  var color = d3.scalePow()
+  //var color = d3.scaleLog()
+    .domain(domain)
+    .range(this.options.colorRange);
   
   // Fill rectangles with color based on data
   rect.selectAll('rect')
