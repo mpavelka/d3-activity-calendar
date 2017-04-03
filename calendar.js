@@ -298,10 +298,10 @@ Calendar.prototype.getColNames = function() {
   var colsCount = this.getColumnsCount();
 
   for (var i=0, time=flrMinDate.getTime(); i<colsCount; i++) {
+    time = time + Calendar.granMilliseconds[gran];
     var date = new Date(time);
     name = this.getDateUnit(date, gran);
     ret.push(name);
-    time = time + Calendar.granMilliseconds[gran]
   }
 
   return ret;
