@@ -128,7 +128,9 @@ Calendar.prototype._init = function(options) {
       flip: false,
       show: true,
     },
-    colorRange: ["#ffffff", "#f6fafd", "#edf6fc", "#e3f0fa", "#daebf8", "#d1e7f6", "#c8e2f5", "#bfdef3", "#b6d9f2", "#a4c9e4", "#8fb5d2", "#7aa1bf", "#658dad", "#4f799b", "#3a6488", "#244f75", "#0f3b63", "#012d56", "#012b52", "#01294d", "#002649", "#002444", "#002140", "#00203d", "#001d38"],
+    //colorRange: ["#ffffff", "#f6fafd", "#edf6fc", "#e3f0fa", "#daebf8", "#d1e7f6", "#c8e2f5", "#bfdef3", "#b6d9f2", "#a4c9e4", "#8fb5d2", "#7aa1bf", "#658dad", "#4f799b", "#3a6488", "#244f75", "#0f3b63", "#012d56", "#012b52", "#01294d", "#002649", "#002444", "#002140", "#00203d", "#001d38"],
+    //colorRange: ["#00007f","#0000a3","#0000c8","#0000ec","#0004ff","#0024ff","#0044ff","#0064ff","#0088ff","#00a8ff","#00c8ff","#02e8f4","#1fffd7","#39ffbd","#53ffa3","#6cff89","#89ff6c","#a3ff53","#bdff39","#d7ff1f","#f4f802","#ffda00","#ffbd00","#ff9f00","#ff7e00","#ff6000","#ff4200","#ff2500","#ec0300","#c80000","#a30000","#7f0000"],
+    colorRange: ["#f7fbff","#f0f6fc","#eaf2fa","#e4eef8","#ddeaf6","#d7e6f4","#d1e2f2","#cbdef0","#c3d9ee","#b9d5ea","#afd1e6","#a5cde3","#98c7df","#8bc0dd","#7fb8da","#72b1d7","#65aad3","#5aa3cf","#509bcb","#4694c7","#3c8cc3","#3383be","#2b7bba","#2373b6","#1b6aaf","#1562a9","#0f5aa3","#08529c","#08488f","#084083","#083877","#08306b"],
   }, options);
 
   if (this.options.yAxis.gran > this.options.xAxis.gran)
