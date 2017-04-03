@@ -202,7 +202,7 @@ Calendar.prototype.setData = function(data, dateMapper, valueMapper) {
   }
 
   this.data = res;
-  this.minVal = minVal;
+  this.minVal = 0;
   this.maxVal = maxVal;
 
   return res;
