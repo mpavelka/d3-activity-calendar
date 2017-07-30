@@ -120,14 +120,11 @@ CalHeatMap.prototype.render_days = function(wrapper, day_width, interval_height)
 
 
 	// Create canvas
-	if (this.canvas == undefined)
-	{
-		this.canvas = d3.select(wrapper)
-			.append("svg")
-			.attr('class', 'calheatmap')
-			.attr("height", (interval_height + this.options.margin_y) * x_length + 50)
-			.attr("width", (day_width + this.options.margin_x) * x_days + 50);
-	}
+	this.canvas = d3.select(wrapper)
+		.append("svg")
+		.attr('class', 'calheatmap')
+		.attr("height", (interval_height + this.options.margin_y) * x_length + 50)
+		.attr("width", (day_width + this.options.margin_x) * x_days + 50);
 
 	// Append X axis
 	this.canvas.append('g')
