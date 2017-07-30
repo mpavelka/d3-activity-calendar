@@ -158,10 +158,10 @@ CalHeatMap.prototype.render_days = function(wrapper, day_width, interval_height)
 	var bucket_rects = bucket.enter();
 	bucket_rects.append("rect")
 		.attr("x", function(val, index) {
-			return (day_width + options.margin_x) * Math.floor(index / x_length);
+			return (day_width + options.margin_x) * Math.floor(val.b / x_length);
 		})
 		.attr("y", function(val, index) {
-			return (interval_height + options.margin_y) * (index % x_length);
+			return (interval_height + options.margin_y) * (val.b % x_length);
 		})
 		.attr("width", day_width)
 		.attr("height", interval_height)
