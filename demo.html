@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>Activity Calendar Heatmap</title>
+	<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/json2/20160511/json2.min.js"></script>
+	<script src="https://d3js.org/d3.v4.min.js"></script>
+	<script type="text/javascript" src="calheatmap.js"></script>
+</head>
+<body>
+
+<div id="my-wrapper">
+</div>
+
+<script type="text/javascript">
+	var calheatmap = new CalHeatMap({
+    	date_min: new Date(Date.UTC(2017,5,1,0,0,0)),
+    	date_max: new Date(Date.UTC(2017,6,1,0,0,0)),
+    	interval: 2 * 60 * 1000
+	});
+
+	// Construct ElasticSearch query
+	var es_url = "/es/log-*/_search";
+	var es_query = JSON.stringify({
+		query: {
+			bool: {
+				must: [
+					//{ "exists": { "field": "audit_type" } },
+					{ match: { level: { query: "AUDIT", type: "phrase" } } },
+					{ range: { "@timestamp": { "gte" : calheatmap.options.date_min , "lte" : calheatmap.options.date_max } } }
+				]
+			}
+		},
+		aggs: { by_time: { date_histogram: { field : "@timestamp", interval : calheatmap.options.interval + "ms" } } },
+		size: 0
+	});
+
+	// Prepare and send request 
+	var xhr = new XMLHttpRequest();
+	xhr.open("POST", es_url, true);
+	xhr.setRequestHeader("Content-type", "application/json");
+	xhr.onreadystatechange = function()
+	{
+		if (xhr.readyState !== XMLHttpRequest.DONE) return;
+		if (xhr.status !== 200)
+		{
+			document.getElementById("my-wrapper").textContent = "Error: " + xhr.statusText + " (" + xhr.status + ")";
+			return;
+		}
+
+		document.getElementById("my-wrapper").textContent = "Parsing ...";
+		
+		var data = JSON.parse(xhr.responseText);
+		calheatmap.load(data.aggregations.by_time.buckets,
+			function mapDate(obj) { return new Date(obj.key) },
+			function mapValue(obj) { return obj.doc_count}
+		);
+
+		document.getElementById("my-wrapper").textContent = "";
+		calheatmap.render_days("#my-wrapper", 40, 1);
+	}
+
+	document.getElementById("my-wrapper").textContent = "Loading ...";
+	xhr.send(es_query);
+
+</script>
+
+</body>
+</html>
