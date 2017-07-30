@@ -141,7 +141,7 @@ CalHeatMap.prototype.render_days = function(wrapper, day_width, interval_height)
 	// Rotate X axis text
 	this.canvas.selectAll(".xaxis text")
 		.attr("transform", function(d) {
-			return "translate(0, 20) rotate(-90)";
+			return "translate(10, 10) rotate(-45)";
 		});
 
 	// Append Y axis
