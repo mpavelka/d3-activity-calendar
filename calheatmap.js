@@ -96,19 +96,18 @@ CalHeatMap.prototype.render_days = function(wrapper, day_width, interval_height)
 	var options = this.options;
 
 	// X Axis
-
 	var x_days = Math.ceil((this.options.date_max - this.options.date_min)/(1000*60*60*24));
-	var x = d3.scaleTime()
-		.range([0, x_days * (day_width + this.options.margin_x)])
-		.domain([this.options.date_min, this.options.date_max]);
+	var x = d3.scaleUtc()
+		.range([0, (day_width + this.options.margin_x) * x_days])
+		.domain([this.options.date_min, this.options.date_max-1]);
+		
 
-	var xAxis = d3.axisBottom(x).ticks(x_days);
+	var xAxis = d3.axisBottom(x).ticks(x_days).tickFormat(d3.timeFormat("%b %d"));
 
 	var x_length = (1000*60*60*24) / this.options.interval;
 
 
 	// Y Axis
-
 	var y = d3.scaleLinear()
 		.range([0, (interval_height + this.options.margin_y) * x_length])
 		.domain([0, 24]);
