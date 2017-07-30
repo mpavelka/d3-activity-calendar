@@ -43,11 +43,9 @@ CalHeatMap.prototype._init = function(options) {
 		value_max: 0,
 		margin_x: 1,
 		margin_y: 0,
-		color_range: ["#f7fbff", "#08306b"],
-		//color_range: ["#ffffff", "#f6fafd", "#edf6fc", "#e3f0fa", "#daebf8", "#d1e7f6", "#c8e2f5", "#bfdef3", "#b6d9f2", "#a4c9e4", "#8fb5d2", "#7aa1bf", "#658dad", "#4f799b", "#3a6488", "#244f75", "#0f3b63", "#012d56", "#012b52", "#01294d", "#002649", "#002444", "#002140", "#00203d", "#001d38"],
-		//color_range: ["#00007f","#0000a3","#0000c8","#0000ec","#0004ff","#0024ff","#0044ff","#0064ff","#0088ff","#00a8ff","#00c8ff","#02e8f4","#1fffd7","#39ffbd","#53ffa3","#6cff89","#89ff6c","#a3ff53","#bdff39","#d7ff1f","#f4f802","#ffda00","#ffbd00","#ff9f00","#ff7e00","#ff6000","#ff4200","#ff2500","#ec0300","#c80000","#a30000","#7f0000", "#FF0000"],
-		// Blues: color_range: ["#f7fbff","#f0f6fc","#eaf2fa","#e4eef8","#ddeaf6","#d7e6f4","#d1e2f2","#cbdef0","#c3d9ee","#b9d5ea","#afd1e6","#a5cde3","#98c7df","#8bc0dd","#7fb8da","#72b1d7","#65aad3","#5aa3cf","#509bcb","#4694c7","#3c8cc3","#3383be","#2b7bba","#2373b6","#1b6aaf","#1562a9","#0f5aa3","#08529c","#08488f","#084083","#083877","#08306b", "#FF0000"],
-		//color_range: ["#fff5f0","#feefe8","#feeae0","#fee5d9","#fdded0","#fdd5c3","#fcccb7","#fcc2ab","#fcb89d","#fcad91","#fca386","#fc997a","#fb8d6d","#fb8363","#fb7959","#fb6f4f","#f96345","#f6573e","#f34b36","#f03f2f","#e83429","#df2c25","#d62321","#cd1a1e","#c2161b","#b91319","#af1117","#a60f15","#950b13","#860711","#76030f","#67000c"],
+		//color_range: ["#f7fbff", "#08306b"], // Blue
+		//color_range: ["#fff5f0", "#67000c"], // Red
+		color_range: ["#fff5f0", "#00670c"], // Red
 	}, options);
 }
 
