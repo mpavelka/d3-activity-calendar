@@ -86,6 +86,7 @@ CalHeatMap.prototype.load = function(data_series, dateMapper, valueMapper) {
 	}
 
 	for (b in m) {
+		if (m[b].v == 0) continue; // Filter all zero buckets
 		this.buckets.push(m[b]);
 	}
 }
